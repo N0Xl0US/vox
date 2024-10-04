@@ -16,8 +16,13 @@ function handleMouseMove(event) {
 	mouseY = event.clientY;
 }
 
+function resetMouse(){
+	mouseX = 0
+	mouseY = 0;
+}
+
 document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("keyup", handleKeyUp);
 document.addEventListener("mousemove", handleMouseMove);
 
-export { keys, mouseX, mouseY };
+export { keys, mouseX, mouseY, resetMouse};
