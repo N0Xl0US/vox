@@ -309,9 +309,7 @@ export class Terrain extends Model {
 			Math.sin(frequency * x) +
 			Math.cos(frequency * z)+
 			Math.sin(2 * frequency * x) +
-			Math.cos(2 * frequency * z) +
-			Math.sin(3 * frequency * x) +
-			Math.cos(3 * frequency * z)
+			Math.cos(2 * frequency * z)
 
 		);
 
@@ -335,15 +333,18 @@ export class Terrain extends Model {
 			}
 		}
 
-		for (let z = -hsize; z < hsize; z++) {
-			for (let x = -hsize; x < hsize; x++) {
+
+		this.granularity = 5;
+
+		for (let z = -hsize; z < hsize; z+=1/this.granularity) {
+			for (let x = -hsize; x < hsize; x+=1/this.granularity) {
 				const height = this.heightFunc(x, z);
 				positions.push(x, Math.exp(height/2), z);
 
 				const normalizedHeight = (height - minHeight) / (maxHeight - minHeight);
 
 				const color = normalizedHeight;
-				colors.push(1-color*color, 1-color, color);
+				colors.push(color*color, color, 1-color);
 			}
 		}
 
@@ -366,6 +367,6 @@ export class Terrain extends Model {
 
 	render() {
 		this.gl.bindVertexArray(this.vao);
-		this.gl.drawArrays(this.gl.POINTS, 0, this.size * this.size);
+		this.gl.drawArrays(this.gl.POINTS, 0, this.size * this.size*this.granularity*this.granularity);
 	}
 }

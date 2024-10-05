@@ -24,7 +24,7 @@ if (gl === null) {
     globalShader.createShaders(vert, frag);
 
     // DATA
-    const model = new Terrain(gl,1000);
+    const model = new Terrain(gl,100);
     model.setup();
 
     gl.useProgram(globalShader.program);
@@ -44,7 +44,7 @@ if (gl === null) {
     const fieldOfView = (45 * Math.PI) / 180;
     const aspect = resolution[0] / resolution[1];
     const zNear = 0.1;
-    const zFar = 200.0;
+    const zFar = 300.0;
     const projectionMatrix = mat4.create();
 
     mat4.perspective(projectionMatrix, fieldOfView, aspect, zNear, zFar);
