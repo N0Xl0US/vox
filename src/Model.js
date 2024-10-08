@@ -1,3 +1,12 @@
+import Noise from 'noise-ts';
+
+const seed = Math.random();
+const noise = new Noise(seed);
+const gaussian = (x,y,sigma) => {	
+	return Math.exp(-(x*x+y*y)/(2*sigma*sigma));
+}
+
+
 export default class Model {
 	constructor(gl) {
 		this.gl = gl;
@@ -299,74 +308,94 @@ export class Terrain extends Model {
 	constructor(gl, size) {
 		super(gl);
 		this.size = size;
-	}
-
-	heightFunc(x, z) {
-		const amplitude = 1.5;
-		const frequency = 0.1;
-
-		let height = amplitude * (
-			Math.sin(frequency * x) +
-			Math.cos(frequency * z)+
-			Math.sin(2 * frequency * x) +
-			Math.cos(2 * frequency * z)
-
-		);
-
-		return height;
+		this.granularity = 50;
+		this.noiseScale = 0.1;
+		this.heightScale = 1.0;
+		this.noise = new Noise(Math.random());
+		this.gaussianSigma = this.size / 4;
+		this.useMinecraftColors = false; // New toggle for color scheme
 	}
 
 	setup() {
 		const hsize = Math.floor(this.size / 2);
+		const step = 1 / this.granularity;
 
-		const positions = [];
-		const colors = [];
+		const vertices = [];
+		const indices = [];
 
-		let minHeight = Infinity;
-		let maxHeight = -Infinity;
+		for (let z = -hsize; z < hsize; z += step) {
+			for (let x = -hsize; x < hsize; x += step) {
+				const height1 = this.getHeight(x, z);
+				const height2 = this.getHeight(x + step, z);
+				const height3 = this.getHeight(x, z + step);
+				const height4 = this.getHeight(x + step, z + step);
 
-		for (let z = -hsize; z < hsize; z++) {
-			for (let x = -hsize; x < hsize; x++) {
-				const height = this.heightFunc(x, z);
-				minHeight = Math.min(minHeight, height);
-				maxHeight = Math.max(maxHeight, height);
+				const color1 = this.getColor(height1);
+				const color2 = this.getColor(height2);
+				const color3 = this.getColor(height3);
+				const color4 = this.getColor(height4);
+
+				// First triangle
+				vertices.push(x, height1, z, ...color1);
+				vertices.push(x + step, height2, z, ...color2);
+				vertices.push(x, height3, z + step, ...color3);
+
+				// Second triangle
+				vertices.push(x + step, height2, z, ...color2);
+				vertices.push(x + step, height4, z + step, ...color4);
+				vertices.push(x, height3, z + step, ...color3);
 			}
 		}
-
-
-		this.granularity = 5;
-
-		for (let z = -hsize; z < hsize; z+=1/this.granularity) {
-			for (let x = -hsize; x < hsize; x+=1/this.granularity) {
-				const height = this.heightFunc(x, z);
-				positions.push(x, Math.exp(height/2), z);
-
-				const normalizedHeight = (height - minHeight) / (maxHeight - minHeight);
-
-				const color = normalizedHeight;
-				colors.push(color*color, color, 1-color);
-			}
-		}
-
 
 		this.vao = this.gl.createVertexArray();
 		this.gl.bindVertexArray(this.vao);
 
-		this.positionBuffer = this.gl.createBuffer();
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
-		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(positions), this.gl.STATIC_DRAW);
-		this.gl.enableVertexAttribArray(0);
-		this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 0, 0);
+		const buffer = this.gl.createBuffer();
+		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, buffer);
+		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(vertices), this.gl.STATIC_DRAW);
 
-		this.colorBuffer = this.gl.createBuffer();
-		this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.colorBuffer);
-		this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.STATIC_DRAW);
+		this.gl.enableVertexAttribArray(0);
+		this.gl.vertexAttribPointer(0, 3, this.gl.FLOAT, false, 24, 0);
+
 		this.gl.enableVertexAttribArray(1);
-		this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 0, 0);
+		this.gl.vertexAttribPointer(1, 3, this.gl.FLOAT, false, 24, 12);
+
+		this.vertexCount = vertices.length / 6;
+	}
+
+	getHeight(x, z) {
+		const baseHeight = this.noise.perlin2(x*0.5, z*0.5)*gaussian(x,z,2);
+		const detailNoise = this.noise.perlin2(x, z) * gaussian(x,z,3);
+		return (baseHeight + detailNoise) * this.heightScale;
+	}
+
+	getColor(height) {
+		const normalizedHeight = (height + this.heightScale) / (2 * this.heightScale);
+		
+		if (this.useMinecraftColors) {
+			if (normalizedHeight < 0.3) return [0.0, 0.0, 0.5];      // Deep water
+			if (normalizedHeight < 0.4) return [0.0, 0.0, 1.0];      // Water
+			if (normalizedHeight < 0.5) return [0.76, 0.7, 0.5];     // Sand
+			if (normalizedHeight < 0.7) return [0.0, 0.5, 0.0];      // Grass
+			if (normalizedHeight < 0.8) return [0.5, 0.5, 0.5];      // Stone
+			return [1.0, 1.0, 1.0];                                  // Snow
+		} else {
+			if (normalizedHeight < 0.3) return [0.1, 0.0, 0.3];     // Deep indigo
+			if (normalizedHeight < 0.4) return [0.5, 0.0, 0.5];      // Vibrant purple
+			if (normalizedHeight < 0.55) return [0.2, 0.0, 0.5];      // Vibrant purple
+			if (normalizedHeight < 0.6) return [0.9, 0.0, 0.4];      // Hot pink
+			if (normalizedHeight < 0.7) return [1.0, 0.4, 0.0];      // Bright orange
+			return [1.0, 0.9, 0.0];                                  // Bright yellow
+		}
+	}
+
+	toggleColorScheme() {
+		this.useMinecraftColors = !this.useMinecraftColors;
+		this.setup(); // Regenerate the terrain with the new color scheme
 	}
 
 	render() {
 		this.gl.bindVertexArray(this.vao);
-		this.gl.drawArrays(this.gl.POINTS, 0, this.size * this.size*this.granularity*this.granularity);
+		this.gl.drawArrays(this.gl.POINTS, 0, this.vertexCount);
 	}
 }

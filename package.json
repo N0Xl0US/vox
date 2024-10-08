@@ -13,6 +13,9 @@
     "vite-plugin-glsl": "^1.2.1"
   },
   "dependencies": {
-    "gl-matrix": "^3.4.3"
+    "gl-matrix": "^3.4.3",
+    "math.js": "^1.1.46",
+    "noise-ts": "^1.0.1",
+    "noisejs": "^2.1.0"
   }
 }

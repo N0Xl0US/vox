@@ -13,7 +13,7 @@ function handleKeyUp(event) {
 
 function handleMouseMove(event) {
 	mouseX = event.clientX;
-	mouseY = event.clientY;
+	mouseY = event.clientY;	
 }
 
 function resetMouse(){
