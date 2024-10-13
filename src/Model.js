@@ -27,7 +27,7 @@ export class Triangle extends Model {
 			0.0, 0.2, 0.0, 1.0, 0.0, 0.0,
 		]);
 
-		this.vbo = Model.createBuffer(data, this.gl.STATIC_DRAW, this.gl);
+		this.vbo = Model.createBuffer(this.gl,data, this.gl.STATIC_DRAW);
 		this.vao = Model.createVertexArray(this.gl);
 
 		this.gl.enableVertexAttribArray(0);
