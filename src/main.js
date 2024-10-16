@@ -1,8 +1,9 @@
 import Shader from "./Shader";
 import Texture from "./Texture";
-import { Cube, Terrain } from "./Model";
+import { Terrain } from "./Model";
 import { glMatrix, mat4, vec3 } from 'gl-matrix';
-import { keys, mouseX, mouseY } from "./Input";
+import { keys, mouseDeltaX, mouseDeltaY, resetMouseDelta, isPointerLocked } from "./Input";
+
 import vertexShaderSource from "./shaders/vert.glsl";
 import fragmentShaderSource from "./shaders/frag.glsl";
 
@@ -52,18 +53,13 @@ if (gl === null) {
 
     let cameraUp = vec3.fromValues(0.0, 1.0, 0.0);
     let cameraFront = vec3.fromValues(0.0, 0.0, 1.0);
-    let cameraPosition = vec3.fromValues(0.0, 1, 0.0);
-    const movementSpeed = 0.5;
+    let cameraPosition = vec3.fromValues(0.0, 0, 0.0);
+    const movementSpeed = 0.1;
 
 	let yaw = 45;
 	let pitch = 0;
 	const rotationSpeed = 0.5;
-	const mouseSensitivity = 0.1;
-	let isMouseDown = false;
-	let lastMouseX = 0;
-	let lastMouseY = 0;
-	let currentMouseX = 0;
-	let currentMouseY = 0;
+	const mouseSensitivity = 0.05;
 
     gl.uniformMatrix4fv(uPMLocation, false, projectionMatrix);
     gl.uniformMatrix4fv(uMVMLocation, false, modelViewMatrix);
@@ -75,7 +71,6 @@ if (gl === null) {
     gl.depthFunc(gl.LEQUAL);
 
     function updateCamera() {
-
         const front = vec3.create();
 		const up = vec3.create();
 		const right = vec3.create();
@@ -91,30 +86,20 @@ if (gl === null) {
         if (keys[32]) vec3.scaleAndAdd(cameraPosition, cameraPosition, up, movementSpeed);
         if (keys[16]) vec3.scaleAndAdd(cameraPosition, cameraPosition, up, -movementSpeed);
 
-		// if (keys[75]) pitch += rotationSpeed;
-		// if (keys[74]) pitch -= rotationSpeed;
-		// if (keys[72]) yaw -= rotationSpeed;
-		// if (keys[76]) yaw += rotationSpeed;
+        if (isPointerLocked) {
+            yaw += mouseDeltaX * mouseSensitivity;
+            pitch -= mouseDeltaY * mouseSensitivity;
 
-		if (isMouseDown) {
-			const deltaX = currentMouseX - lastMouseX;
-			const deltaY = currentMouseY - lastMouseY;
+            pitch = Math.max(-89, Math.min(89, pitch));
 
-			yaw += deltaX * mouseSensitivity;
-			pitch -= deltaY * mouseSensitivity;
+            const frontX = Math.cos(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
+            const frontY = Math.sin(glMatrix.toRadian(pitch));
+            const frontZ = Math.sin(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
+            vec3.set(cameraFront, frontX, frontY, frontZ);
+            vec3.normalize(cameraFront, cameraFront);
+        }
 
-			// Clamp pitch to avoid flipping
-			pitch = Math.max(-89, Math.min(89, pitch));
-
-			lastMouseX = currentMouseX;
-			lastMouseY = currentMouseY;
-		}
-
-		const frontX = Math.cos(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
-		const frontY = Math.sin(glMatrix.toRadian(pitch));
-		const frontZ = Math.sin(glMatrix.toRadian(yaw)) * Math.cos(glMatrix.toRadian(pitch));
-		vec3.set(cameraFront, frontX, frontY, frontZ);
-		vec3.normalize(cameraFront, cameraFront);
+        resetMouseDelta();
 
         const viewMatrix = mat4.create();
         mat4.lookAt(viewMatrix, cameraPosition, vec3.add(vec3.create(), cameraPosition, cameraFront), cameraUp);
@@ -135,23 +120,4 @@ if (gl === null) {
     }
 
     renderLoop();
-
-    canvas.addEventListener('mousedown', (e) => {
-        isMouseDown = true;
-        lastMouseX = e.clientX;
-        lastMouseY = e.clientY;
-        currentMouseX = e.clientX;
-        currentMouseY = e.clientY;
-    });
-
-    canvas.addEventListener('mouseup', () => {
-        isMouseDown = false;
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-        if (isMouseDown) {
-            currentMouseX = e.clientX;
-            currentMouseY = e.clientY;
-        }
-    });
 }
