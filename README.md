@@ -50,4 +50,3 @@ And in `Model.js` (the `Terrain` constructor), you can change parameters such as
    - Or with another compatible package manager if you prefer.
 3. **Start the dev server**
    - `npm run dev`
-   - Open the printed local URL (by default something like `http://localhost:5173`).
